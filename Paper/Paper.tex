@@ -1,0 +1,113 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{float}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\V}{\mathbb{V}}
+\newcommand{\prl}{\parallel}
+\newcommand{\prp}{\perp}
+
+\title{Billiard Ball Physics}
+\author{Spencer T. Parkin}
+
+\begin{document}
+\maketitle
+
+Letting $m_1,m_2\in\R$ be the two masses of two billiard balls, and $v_1,v_2\in\V$ be their respective velocities,
+suppose these balls are in collision with one another at a contact point with unit-length contact normal $n\in\V$.
+We will let $x_1,x_2\in\V$ denote, respectively, the new velocities of these billiard balls after the collision.
+That said, following the advice of my friend Paul Johnston, two quantities are preserved: the total momentum
+of the system, and the total kinetic energy.  According to my physics text, the first of these is always conserved, and
+the second is conserved in the case of what's called a perfectly elastic collision.  For a brief moment, the kinetic energy
+of the collision is converted to potential energy, but then all of that potential energy is converted back into kinetic energy,
+none of it getting lost to heat or sound or anything else.
+
+Letting
+\begin{align*}
+P(a,b)&=m_1a+m_2b,\\
+K(a,b)&=\frac{1}{2}m_1a^2+\frac{1}{2}m_2b^2,
+\end{align*}
+this means that
+\begin{align*}
+P(v_1,v_2)&=P(x_1,x_2),\\
+K(v_1,v_2)&=K(x_1,x_2).
+\end{align*}
+Now for any $a\in\V$, let $a^{\prl}=(a\cdot n)n$ and $a^{\prp}=a-a^{\prl}$.  Doing so, it is not hard to show that
+\begin{align*}
+P(x_1,x_2) &= P(x_1^{\prl},x_2^{\prl})+P(x_1^{\prp},x_2^{\prp}), \\
+K(x_1,x_2) &= K(x_1^{\prl},x_2^{\prl})+K(x_1^{\prp},x_2^{\prp}),
+\end{align*}
+and similarly for $v_1$ and $v_2$.\footnote{This means that $P$ and $K$ are bilinear functions.}
+Therefore, after making a physics-based argument that we must have $v_1^{\prp}=x_1^{\prp}$ and $v_2^{\prp}=x_2^{\prp}$,
+our preservation equations become
+\begin{align*}
+P(v_1^{\prl},v_2^{\prl})&=P(x_1^{\prl},x_2^{\prl}),\\
+K(v_1^{\prl},v_2^{\prl})&=K(x_1^{\prl},x_2^{\prl}).
+\end{align*}
+We will now write $P^{\prl}=P(v_1^{\prl},v_2^{\prl})$ and $K^{\prl}=K(v_1^{\prl},v_2^{\prl})$ for short.
+Solving for $x_2^{\prl}$ in the momentum preservation equation, and then plugging that into
+the kinetic energy preservation equation, we find that
+\begin{equation*}
+0 = \frac{1}{2}m_1\left(1+\frac{m_1}{m_2}\right)(x_1^{\prl})^2 - \frac{m_1}{m_2}P^{\prl}\cdot x_1^{\prl} + \frac{(P^{\prl})^2}{2m_2} - K^{\prl}.
+\end{equation*}
+Though not immediately obvious, this is a quadratic equation in the variable $x_1\cdot n$.  To see that, we write
+\begin{equation*}
+0 = \frac{1}{2}m_1\left(1+\frac{m_1}{m_2}\right)(x_1\cdot n)^2 - \frac{m_1}{m_2}(P\cdot n)(x_1\cdot n) + \frac{(P\cdot n)^2}{2m_2} - K^{\prl}.
+\end{equation*}
+If we find a solution for $(x_1\cdot n)$, we can then find $x_1$ as
+\begin{equation*}
+x_1=v_1^{\prp}+(x_1\cdot n)n.
+\end{equation*}
+By symmetry of the preservation equations, a similar solution is found for $x_2$.  (Just replace subscript 1 with 2 and vice-versa.)
+
+Back to our quadratic equation, if we examine the descriminant $D$, it becomes
+\begin{equation*}
+D = 2m_1\left(1+\frac{m_1}{m_2}\right)K^{\prl}-\frac{m_1}{m_2}(P\cdot n)^2.
+\end{equation*}
+If we continue to expand this, we eventually find that
+\begin{equation*}
+D = m_1^2\left((v_1\cdot n)^2 + (v_2\cdot n)^2 - 2(v_1\cdot n)(v_2\cdot n)\right).
+\end{equation*}
+Interestingly, it is clear that this factors as
+\begin{equation*}
+D = m_1^2\left((v_2-v_1)\cdot n\right)^2.
+\end{equation*}
+Immediately we see that $D\geq 0$, and so our quadratic equation always has at least one real zero.
+Applying our quadratic formula, we arrive at
+\begin{equation*}
+x_1\cdot n = \frac{P\cdot n\pm m_2|(v_2-v_1)\cdot n|}{m_1+m_2}.
+\end{equation*}
+Putting it all together now, we finally have
+\begin{equation*}
+x_1 = v_1 + \left(\frac{P\cdot n\pm m_2(v_2-v_1)\cdot n}{m_1+m_2}-v_1\cdot n\right)n.
+\end{equation*}
+Notice that we could drop the absolute value because of the plus or minus.  Now, if we examine the
+negative case, we find that $x_1$ no longer becomes dependent upon $v_2$, which doesn't make intuitive sense.
+So the case we care about must be the positive case.  In that case, we get
+\begin{equation*}
+x_1 = v_1 + \left(\frac{2m_2}{m_1+m_2}(v_2\cdot n)+\left(\frac{m_1-m_2}{m_1+m_2}-1\right)(v_1\cdot n)\right)n.
+\end{equation*}
+Using this equation, we can now resolve collisions between two billiard balls.  Notice that it didn't matter which direction $n$ pointed, as long as it was a normal to the contact surface.
+
+Let's check some intuition here.
+Suppose the first ball was at rest when the second ball came and hit it.  Further, let's suppose the two balls
+had the same mass.  In math terms, this means that $m_1=m_2$ and $v_1=0$.  With these, we find
+that $x_1=(v_2\cdot n)n=v_2^{\prl}$, which makes sense.  If the first ball was hit head-on, then $v_2=v_2^{\prl}$,
+and we simply have $x_1=v_2$, showing that the first ball inherited all of the velocity of the second.  So what
+happened to the velocity of the second ball under this same situation?  Using our formulate (replacing 1 with 2 and vice-versa),
+we find that $x_2=v_2-v_2^{\prl}$.  Again, if we hit it head-on, then $v_2=v_2^{\prl}$, and we get $x_2=0$,
+which makes sense.  The second ball stops while the first ball inherits all of the second ball's velocity.
+
+Let's now consider a billiard ball colliding with the edge of the pool table.  In this case, we take the limit
+as $m_2$ goes to $\infty$, and let $v_2=0$, assuming the first billiard ball is the ball in question here.
+Using our formulate for $x_1$, we get
+\begin{equation*}
+x_1 = v_1 - 2(v_1\cdot n)n = -nv_1n,
+\end{equation*}
+which we clearly recognize as a reflection in geometric algebra.  So the ball simply bounces off the edge of the table.
+
+\end{document}
