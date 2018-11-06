@@ -1,10 +1,13 @@
 # canvas.py
 
+import time
+
 from PyQt5 import QtGui, QtCore, QtWidgets, QtOpenGL
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from math2d_aa_rect import AxisAlignedRectangle
+from math2d_text import TextRenderer
 
 class Canvas(QtOpenGL.QGLWidget):
     def __init__(self, parent):
@@ -17,6 +20,15 @@ class Canvas(QtOpenGL.QGLWidget):
         
         from pool_table import PoolTable
         self.pool_table = PoolTable(1.0 / 9.0)
+        
+        self.animation_timer = QtCore.QTimer()
+        self.animation_timer.start(1)
+        self.animation_timer.timeout.connect(self.animation_step)
+        
+        self.last_render_time = time.time()
+        self.frame_count = 0
+        self.fps_text = ''
+        self.text_renderer = TextRenderer()
     
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -25,6 +37,12 @@ class Canvas(QtOpenGL.QGLWidget):
         glViewport(0, 0, width, height)
         
     def paintGL(self):
+        
+        current_render_time = time.time()
+        elapsed_time = current_render_time - self.last_render_time
+        self.last_render_time = current_render_time
+        frames_per_second = 1.0 / elapsed_time
+        
         glClear(GL_COLOR_BUFFER_BIT)
 
         viewport = glGetIntegerv(GL_VIEWPORT)
@@ -34,7 +52,7 @@ class Canvas(QtOpenGL.QGLWidget):
         viewport_rect.max_point.x = float(viewport[2])
         viewport_rect.max_point.y = float(viewport[3])
         
-        proj_rect = self.pool_table.border_rect.Clone()
+        proj_rect = self.pool_table.border_rect.Copy()
         proj_rect.ExpandToMatchAspectRatioOf(viewport_rect)
         proj_rect.Scale(1.1)
         
@@ -47,4 +65,17 @@ class Canvas(QtOpenGL.QGLWidget):
         
         self.pool_table.draw()
         
+        self.frame_count += 1
+        if self.frame_count % 10 == 0:
+            self.fps_text = 'FPS: %1.2f' % frames_per_second
+        rect = proj_rect.Copy()
+        rect.max_point.y = rect.min_point.y + (rect.max_point.y - rect.min_point.y) * 0.05
+        self.text_renderer.render_text(self.fps_text, rect)
+        
         glFlush()
+    
+    def animation_step(self):
+        
+        #...
+        
+        self.update()

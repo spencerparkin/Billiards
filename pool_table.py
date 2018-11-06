@@ -10,7 +10,9 @@ from math2d_polygon import Polygon
 
 class PoolTable(object):
     def __init__(self, pocket_radius):
-        self.pocket_radius = pocket_radius
+        self._recalculate_geometry(pocket_radius)
+
+    def _recalculate_geometry(self, pocket_radius):
         sqrt2 = math.sqrt(2.0)
         offset = pocket_radius * sqrt2
         self.segment_list = [

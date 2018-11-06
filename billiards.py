@@ -6,6 +6,7 @@ import traceback
 sys.path.append(r'C:\dev\pyMath2D')
 
 from PyQt5 import QtGui, QtWidgets
+from OpenGL.GLUT import *
 
 def exception_hook(cls, exc, tb):
     sys.__excepthook__(cls, exc, tb)
@@ -14,6 +15,8 @@ if __name__ == '__main__':
     sys.excepthook = exception_hook
 
     try:
+        glutInit(sys.argv)
+        
         app = QtWidgets.QApplication(sys.argv)
 
         from window import Window
