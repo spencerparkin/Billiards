@@ -61,8 +61,11 @@ class PoolTable(object):
         cue_ball.position = Vector(1.7, 0.0)
         cue_ball.velocity = Vector(0.0, 0.0)
         
-        j = 0
+        ball_8 = self.ball_list.pop(self.find_ball(8))
         random.shuffle(self.ball_list)
+        self.ball_list.insert(0, ball_8)
+        
+        j = 0
         for rack_position in self.yield_rack_positions():
             ball = self.ball_list[j]
             ball.position = rack_position
@@ -135,4 +138,4 @@ class PoolTable(object):
         
         # Draw the balls.
         for ball in self.ball_list:
-            ball.render(wire_frame=True)
+            ball.render()

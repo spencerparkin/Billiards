@@ -33,6 +33,12 @@ class Canvas(QtOpenGL.QGLWidget):
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 0.0)
         
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        for ball in self.pool_table.ball_list:
+            ball.load_texture()
+        
     def resizeGL(self, width, height):
         glViewport(0, 0, width, height)
         
