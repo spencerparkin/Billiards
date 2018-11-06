@@ -24,6 +24,9 @@ class PoolTable(object):
             self.ball_list.append(ball)
         
         self.reset_balls()
+        
+        self.max_advance_distance = ball_radius
+        self.friction = 0.995
     
     def find_ball(self, number):
         for i in range(len(self.ball_list)):
@@ -139,3 +142,88 @@ class PoolTable(object):
         # Draw the balls.
         for ball in self.ball_list:
             ball.render()
+    
+    def advance_simulation(self, elapsed_time):
+    
+        # To prevent tunnelling, we need to know how fast the fastest ball is moving,
+        # and then only let the simulation advance in steps where the fastest ball does
+        # not move further than a certain distance at each of those steps.
+        max_speed = 0.0
+        for ball in self.ball_list:
+            speed = ball.velocity.Length()
+            if speed > max_speed:
+                max_speed = speed
+        
+        max_distance = max_speed * elapsed_time
+        if max_distance > self.max_advance_distance:
+            time_step = self.max_advance_distance / max_speed
+        else:
+            time_step = elapsed_time
+        
+        while elapsed_time > 0.0:
+            delta_time = time_step if time_step < elapsed_time else elapsed_time
+            self._advance_balls(delta_time)
+            elapsed_time -= delta_time
+    
+    def _advance_balls(self, delta_time):
+        # We begin with the assumption that no ball is in collision with any other, or any bumper.
+        # After moving all the balls, we then are going to check for collisions.
+        # To simplify matters, we're not going to try to calculate the exact time of impact.
+        # We're going to approximate the time of impact and the contact normal.
+        # After this call, nothing should be in collision with anything else.
+        
+        # Move all the balls.
+        for ball in self.ball_list:
+            ball.position += ball.velocity * delta_time
+        
+        # Go find and resolve all collisions.
+        while True:
+            ball_a, ball_b = self._find_random_ball_with_ball_collision()
+            if ball_a is not None and ball_b is not None:
+                self._resolve_ball_with_ball_collision(ball_a, ball_b)
+                continue
+            
+            # TODO: Find random ball with edge collision and resolve it.
+            #       This is actually harder than ball-to-ball collisions.
+            
+            break
+        
+        # TODO: If a ball goes in a pocket, we can remove it from our list.
+        
+        # Lastly, simulate friction with a simple scale.
+        for ball in self.ball_list:
+            ball.velocity *= self.friction
+    
+    def _find_random_ball_with_ball_collision(self, epsilon=1e-7):
+        random.shuffle(self.ball_list)
+        for i in range(len(self.ball_list)):
+            ball_a = self.ball_list[i]
+            for j in range(i + 1, len(self.ball_list)):
+                ball_b = self.ball_list[j]
+                center_distance = (ball_a.position - ball_b.position).Length()
+                radius_total = ball_a.radius + ball_b.radius
+                if center_distance < radius_total - epsilon:
+                    return ball_a, ball_b
+        return None, None
+    
+    def _resolve_ball_with_ball_collision(self, ball_a, ball_b):
+        contact_normal = ball_b.position - ball_a.position
+        contact_normal.Normalize()
+        
+        total_mass = ball_a.mass + ball_b.mass
+        
+        scale = 2.0 * ball_b.mass / total_mass * ball_b.velocity.Dot(contact_normal)
+        scale += (((ball_a.mass - ball_b.mass) / total_mass) - 1.0) * ball_a.velocity.Dot(contact_normal)
+        new_velocity_a = ball_a.velocity + contact_normal * scale
+        
+        scale = 2.0 * ball_a.mass / total_mass * ball_a.velocity.Dot(contact_normal)
+        scale += (((ball_b.mass - ball_a.mass) / total_mass) - 1.0) * ball_b.velocity.Dot(contact_normal)
+        new_velocity_b = ball_b.velocity + contact_normal * scale
+        
+        ball_a.velocity = new_velocity_a
+        ball_b.velocity = new_velocity_b
+
+        translate = contact_normal * ((ball_a.radius + ball_b.radius - (ball_b.position - ball_a.position).Length()) / 2.0)
+        
+        ball_a.position -= translate
+        ball_b.position += translate

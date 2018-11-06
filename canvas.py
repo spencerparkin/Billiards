@@ -26,12 +26,13 @@ class Canvas(QtOpenGL.QGLWidget):
         self.animation_timer.timeout.connect(self.animation_step)
         
         self.last_render_time = time.time()
+        self.last_animation_time = time.time()
         self.frame_count = 0
         self.fps_text = ''
         self.text_renderer = TextRenderer()
     
     def initializeGL(self):
-        glClearColor(0.0, 0.0, 0.0, 0.0)
+        glClearColor(0.0, 0.4, 0.0, 0.0)
         
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -82,6 +83,15 @@ class Canvas(QtOpenGL.QGLWidget):
     
     def animation_step(self):
         
-        #...
+        current_animation_time = time.time()
+        elapsed_time = current_animation_time - self.last_animation_time
+        self.last_animation_time = current_animation_time
+        
+        self.pool_table.advance_simulation(elapsed_time)
         
         self.update()
+    
+    def mousePressEvent(self, event):
+        i = self.pool_table.find_ball(0)
+        cue_ball = self.pool_table.ball_list[i]
+        cue_ball.velocity.x = -10.0
