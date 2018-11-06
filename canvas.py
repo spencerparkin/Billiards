@@ -8,6 +8,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from math2d_aa_rect import AxisAlignedRectangle
 from math2d_text import TextRenderer
+from pool_table import PoolTable
 
 class Canvas(QtOpenGL.QGLWidget):
     def __init__(self, parent):
@@ -18,7 +19,6 @@ class Canvas(QtOpenGL.QGLWidget):
 
         super().__init__(gl_format, parent)
         
-        from pool_table import PoolTable
         self.pool_table = PoolTable(1.0 / 9.0)
         
         self.animation_timer = QtCore.QTimer()
