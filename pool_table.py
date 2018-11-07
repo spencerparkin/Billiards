@@ -183,8 +183,10 @@ class PoolTable(object):
                 self._resolve_ball_with_ball_collision(ball_a, ball_b)
                 continue
             
-            # TODO: Find random ball with edge collision and resolve it.
-            #       This is actually harder than ball-to-ball collisions.
+            ball, contact_point, contact_normal = self._find_random_ball_with_bumper_collision()
+            if ball is not None:
+                self._resolve_ball_with_bumper_collision(ball, contact_point, contact_normal)
+                continue
             
             break
         
@@ -194,15 +196,35 @@ class PoolTable(object):
         for ball in self.ball_list:
             ball.velocity *= self.friction
     
+    def _find_random_ball_with_bumper_collision(self, epsilon=1e-7):
+        random.shuffle(self.ball_list)
+        for ball in self.ball_list:
+            contact_segment_list = []
+            for segment in self.segment_list:
+                if segment.Distance(ball.position) < ball.radius - epsilon:
+                    contact_segment_list.append(segment)
+            if len(contact_segment_list) > 0:
+                contact_normal = Vector(0.0, 0.0)
+                contact_point = Vector(0.0, 0.0)
+                for segment in contact_segment_list:
+                    contact_normal += (segment.point_b - segment.point_a).RotatedCCW90().Normalized()
+                    contact_point += segment.ClosestPoint(ball.position)
+                contact_normal.Normalize()
+                contact_point.Scale(1.0 / float(len(contact_segment_list)))
+                return ball, contact_point, contact_normal
+        return None, None, None
+    
+    def _resolve_ball_with_bumper_collision(self, ball, contact_point, contact_normal):
+        ball.velocity = ball.velocity - contact_normal * 2.0 * ball.velocity.Dot(contact_normal)
+        ball.position = ball.position + contact_normal * (ball.radius - (ball.position - contact_point).Length())
+    
     def _find_random_ball_with_ball_collision(self, epsilon=1e-7):
         random.shuffle(self.ball_list)
         for i in range(len(self.ball_list)):
             ball_a = self.ball_list[i]
             for j in range(i + 1, len(self.ball_list)):
                 ball_b = self.ball_list[j]
-                center_distance = (ball_a.position - ball_b.position).Length()
-                radius_total = ball_a.radius + ball_b.radius
-                if center_distance < radius_total - epsilon:
+                if (ball_a.position - ball_b.position).Length() < ball_a.radius + ball_b.radius - epsilon:
                     return ball_a, ball_b
         return None, None
     
@@ -212,12 +234,15 @@ class PoolTable(object):
         
         total_mass = ball_a.mass + ball_b.mass
         
-        scale = 2.0 * ball_b.mass / total_mass * ball_b.velocity.Dot(contact_normal)
-        scale += (((ball_a.mass - ball_b.mass) / total_mass) - 1.0) * ball_a.velocity.Dot(contact_normal)
+        b_dot_n = ball_b.velocity.Dot(contact_normal)
+        a_dot_n = ball_a.velocity.Dot(contact_normal)
+        
+        scale = 2.0 * ball_b.mass / total_mass * b_dot_n
+        scale += (((ball_a.mass - ball_b.mass) / total_mass) - 1.0) * a_dot_n
         new_velocity_a = ball_a.velocity + contact_normal * scale
         
-        scale = 2.0 * ball_a.mass / total_mass * ball_a.velocity.Dot(contact_normal)
-        scale += (((ball_b.mass - ball_a.mass) / total_mass) - 1.0) * ball_b.velocity.Dot(contact_normal)
+        scale = 2.0 * ball_a.mass / total_mass * a_dot_n
+        scale += (((ball_b.mass - ball_a.mass) / total_mass) - 1.0) * b_dot_n
         new_velocity_b = ball_b.velocity + contact_normal * scale
         
         ball_a.velocity = new_velocity_a
