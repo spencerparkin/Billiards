@@ -43,6 +43,14 @@ class Ball(object):
         finally:
             if image is not None:
                 image.close()
+    
+    def release_texture(self):
+        try:
+            glDeleteTextures([self.texture])
+            self.texture = None
+        
+        except Exception as ex:
+            error = str(ex)
         
     def render(self, wire_frame=False):
         if wire_frame or self.texture is None:

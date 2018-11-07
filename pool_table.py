@@ -8,32 +8,35 @@ from OpenGL.GL import *
 from math2d_vector import Vector
 from math2d_line_segment import LineSegment
 from math2d_aa_rect import AxisAlignedRectangle
-from math2d_polygon import Polygon
+from math2d_circle import Circle
 
 class PoolTable(object):
-    def __init__(self, pocket_radius, ball_radius=None):
-        self._recalculate_geometry(pocket_radius)
-        
-        if ball_radius is None:
-            ball_radius = pocket_radius / 2.0
-        
+    def __init__(self, pocket_radius, ball_radius=None, cue_ball_mass=0.17, other_ball_mass=0.16):
+        self.pocket_radius = pocket_radius
+        self.ball_radius = pocket_radius / 2.0 if ball_radius is None else ball_radius
+        self.cue_ball_mass = cue_ball_mass
+        self.other_ball_mass = other_ball_mass
+        self._recalculate_geometry()
         self.ball_list = []
-        for i in range(0, 16):
-            mass = 0.17 if i == 0 else 0.16
-            ball = Ball(ball_radius, mass, i)
-            self.ball_list.append(ball)
-        
+        self.pocketed_balls_list = []
         self.reset_balls()
-        
-        self.max_advance_distance = ball_radius
+        self.max_advance_distance = self.ball_radius
         self.friction = 0.995
     
     def find_cue_ball(self):
-        return self.ball_list[self.find_ball(0)]
+        i = self.find_ball(0)
+        if i is not None:
+            return self.ball_list[i]
     
     def find_ball(self, number):
         for i in range(len(self.ball_list)):
             ball = self.ball_list[i]
+            if ball.number == number:
+                return i
+    
+    def find_pocketed_ball(self, number):
+        for i in range(len(self.pocketed_balls_list)):
+            ball = self.pocketed_balls_list[i]
             if ball.number == number:
                 return i
     
@@ -62,7 +65,43 @@ class PoolTable(object):
             for j in range(0, 4):
                 yield line_segment.Lerp(float(j) / 4.0) + translate
     
+    def replace_cue_ball(self):
+        i = self.find_pocketed_ball(0)
+        if i is None:
+            return
+        
+        cue_ball = self.pocketed_balls_list[i]
+        self.pocketed_balls_list.pop(i)
+        self.ball_list.append(cue_ball)
+        cue_ball.velocity = Vector(0.0, 0.0)
+        
+        rect = AxisAlignedRectangle(min_point=Vector(-2.0, -1.0), max_point=Vector(2.0, 1.0))
+        while True:
+            cue_ball.position = rect.RandomPoint()
+            
+            ball_a, ball_b = self._find_random_ball_with_ball_collision()
+            if ball_a is not None and ball_b is not None:
+                continue
+        
+            ball, contact_point, contact_normal = self._find_random_ball_with_bumper_collision()
+            if ball is not None:
+                continue
+            
+            break
+    
     def reset_balls(self):
+        for ball in self.pocketed_balls_list + self.ball_list:
+            ball.release_texture()
+        
+        self.pocketed_balls_list = []
+        self.ball_list = []
+        
+        for i in range(0, 16):
+            mass = self.cue_ball_mass if i == 0 else self.other_ball_mass
+            ball = Ball(self.ball_radius, mass, i)
+            ball.load_texture()
+            self.ball_list.append(ball)
+        
         cue_ball = self.ball_list.pop(self.find_ball(0))
         cue_ball.position = Vector(1.7, 0.0)
         cue_ball.velocity = Vector(0.0, 0.0)
@@ -80,11 +119,11 @@ class PoolTable(object):
         
         self.ball_list.append(cue_ball)
 
-    def _recalculate_geometry(self, pocket_radius):
+    def _recalculate_geometry(self):
         sqrt2 = math.sqrt(2.0)
-        offset = pocket_radius * sqrt2
+        offset = self.pocket_radius * sqrt2
         self.segment_list = [
-            LineSegment(Vector(pocket_radius, -1.0 - pocket_radius), Vector(offset, -1.0)),
+            LineSegment(Vector(self.pocket_radius, -1.0 - self.pocket_radius), Vector(offset, -1.0)),
             LineSegment(Vector(offset, -1.0), Vector(2.0 - offset, -1.0)),
             LineSegment(Vector(2.0 - offset, -1.0), Vector(2.0, -1.0 - offset)),
             
@@ -94,9 +133,9 @@ class PoolTable(object):
             
             LineSegment(Vector(2.0, 1.0 + offset), Vector(2.0 - offset, 1.0)),
             LineSegment(Vector(2.0 - offset, 1.0), Vector(offset, 1.0)),
-            LineSegment(Vector(offset, 1.0), Vector(pocket_radius, 1.0 + pocket_radius)),
+            LineSegment(Vector(offset, 1.0), Vector(self.pocket_radius, 1.0 + self.pocket_radius)),
             
-            LineSegment(Vector(-pocket_radius, 1.0 + pocket_radius), Vector(-offset, 1.0)),
+            LineSegment(Vector(-self.pocket_radius, 1.0 + self.pocket_radius), Vector(-offset, 1.0)),
             LineSegment(Vector(-offset, 1.0), Vector(-2.0 + offset, 1.0)),
             LineSegment(Vector(-2.0 + offset, 1.0), Vector(-2.0, 1.0 + offset)),
             
@@ -106,21 +145,18 @@ class PoolTable(object):
             
             LineSegment(Vector(-2.0, -1.0 - offset), Vector(-2.0 + offset, -1.0)),
             LineSegment(Vector(-2.0 + offset, -1.0), Vector(-offset, -1.0)),
-            LineSegment(Vector(-offset, -1.0), Vector(-pocket_radius, -1.0 - pocket_radius))
+            LineSegment(Vector(-offset, -1.0), Vector(-self.pocket_radius, -1.0 - self.pocket_radius))
         ]
-        pocket_sides = 12
-        offset = pocket_radius / (2.0 * sqrt2)
+        offset = self.pocket_radius / (2.0 * sqrt2)
         self.pocket_list = [
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(2.0 + offset, 1.0 + offset)),
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(0.0, 1.0 + pocket_radius)),
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(-2.0 - offset, 1.0 + offset)),
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(-2.0 - offset, -1.0 - offset)),
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(0.0, -1.0 - pocket_radius)),
-            Polygon().MakeRegularPolygon(pocket_sides, pocket_radius, Vector(2.0 + offset, -1.0 - offset))
+            Circle(radius=self.pocket_radius, center=Vector(2.0 + offset, 1.0 + offset)),
+            Circle(radius=self.pocket_radius, center=Vector(0.0, 1.0 + self.pocket_radius)),
+            Circle(radius=self.pocket_radius, center=Vector(-2.0 - offset, 1.0 + offset)),
+            Circle(radius=self.pocket_radius, center=Vector(-2.0 - offset, -1.0 - offset)),
+            Circle(radius=self.pocket_radius, center=Vector(0.0, -1.0 - self.pocket_radius)),
+            Circle(radius=self.pocket_radius, center=Vector(2.0 + offset, -1.0 - offset))
         ]
-        for pocket in self.pocket_list:
-            pocket.Tessellate()
-        offset = pocket_radius * (1.0 + sqrt2 / 2.0)
+        offset = self.pocket_radius * (1.0 + sqrt2 / 2.0)
         self.border_rect = AxisAlignedRectangle()
         self.border_rect.max_point = Vector(2.0 + offset, 1.0 + offset)
         self.border_rect.min_point = Vector(-2.0 - offset, -1.0 - offset)
@@ -140,7 +176,7 @@ class PoolTable(object):
         # Draw the pockets.
         glColor3f(0.5, 0.5, 0.5)
         for pocket in self.pocket_list:
-            pocket.mesh.Render()
+            pocket.Render()
         
         # Draw the balls.
         for ball in self.ball_list:
@@ -201,7 +237,15 @@ class PoolTable(object):
             
             break
         
-        # TODO: If a ball goes in a pocket, we can remove it from our list.
+        # Remove any pocketed balls.
+        remove_ball_list = []
+        for ball in self.ball_list:
+            for pocket in self.pocket_list:
+                if pocket.ContainsPoint(ball.position):
+                    remove_ball_list.append(ball)
+        for ball in remove_ball_list:
+            self.ball_list.remove(ball)
+            self.pocketed_balls_list.append(ball)
         
         # Lastly, simulate friction with a simple scale.
         for ball in self.ball_list:

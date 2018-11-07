@@ -25,7 +25,7 @@ class Canvas(QtOpenGL.QGLWidget):
 
         super().__init__(gl_format, parent)
         
-        self.pool_table = PoolTable(1.0 / 9.0)
+        self.pool_table = None
         
         self.animation_timer = QtCore.QTimer()
         self.animation_timer.start(1)
@@ -47,8 +47,7 @@ class Canvas(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
-        for ball in self.pool_table.ball_list:
-            ball.load_texture()
+        self.pool_table = PoolTable(1.0 / 9.0)
         
     def resizeGL(self, width, height):
         glViewport(0, 0, width, height)
@@ -84,7 +83,17 @@ class Canvas(QtOpenGL.QGLWidget):
         
         if self.pool_table.is_settled():
             if self.mode == self.MODE_SHOOT_CUE_BALL:
-                self.cue_stick.draw(self.pool_table.find_cue_ball())
+                cue_ball = self.pool_table.find_cue_ball()
+                if cue_ball is not None:
+                    self.cue_stick.draw(cue_ball)
+            elif self.mode == self.MODE_PLACE_CUE_BALL:
+                cue_ball = self.pool_table.find_cue_ball()
+                if cue_ball is not None:
+                    glColor3f(1.0, 1.0, 1.0)
+                    Vector(0.2, 0.0).Render(cue_ball.position, arrow_head_length=0.05)
+                    Vector(-0.2, 0.0).Render(cue_ball.position, arrow_head_length=0.05)
+                    Vector(0.0, 0.2).Render(cue_ball.position, arrow_head_length=0.05)
+                    Vector(0.0, -0.2).Render(cue_ball.position, arrow_head_length=0.05)
         
         self.frame_count += 1
         if self.frame_count % 10 == 0:
@@ -104,6 +113,12 @@ class Canvas(QtOpenGL.QGLWidget):
         self._handle_key_presses(elapsed_time)
         
         self.pool_table.advance_simulation(elapsed_time)
+
+        if self.mode == self.MODE_SHOOT_CUE_BALL:
+            cue_ball = self.pool_table.find_cue_ball()
+            if cue_ball is None:
+                self.pool_table.replace_cue_ball()
+                self.mode = self.MODE_PLACE_CUE_BALL
         
         self.update()
     
@@ -123,7 +138,7 @@ class Canvas(QtOpenGL.QGLWidget):
         window = self.parent()
         if self.pool_table.is_settled():
             if self.mode == self.MODE_SHOOT_CUE_BALL:
-                angle_change_speed = math.pi / 10.0
+                angle_change_speed = math.pi / 5.0
                 if window.is_key_down(QtCore.Qt.Key_Shift):
                     angle_change_speed = math.pi / 30.0
                 angle_delta = angle_change_speed * elapsed_time
