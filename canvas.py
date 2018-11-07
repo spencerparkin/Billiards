@@ -1,6 +1,7 @@
 # canvas.py
 
 import time
+import math
 
 from PyQt5 import QtGui, QtCore, QtWidgets, QtOpenGL
 from OpenGL.GL import *
@@ -8,9 +9,14 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from math2d_aa_rect import AxisAlignedRectangle
 from math2d_text import TextRenderer
+from math2d_vector import Vector
 from pool_table import PoolTable
+from cue_stick import CueStick
 
 class Canvas(QtOpenGL.QGLWidget):
+    MODE_PLACE_CUE_BALL = 1
+    MODE_SHOOT_CUE_BALL = 2
+    
     def __init__(self, parent):
         gl_format = QtOpenGL.QGLFormat()
         gl_format.setAlpha(True)
@@ -30,6 +36,10 @@ class Canvas(QtOpenGL.QGLWidget):
         self.frame_count = 0
         self.fps_text = ''
         self.text_renderer = TextRenderer()
+        
+        self.cue_stick = CueStick()
+        
+        self.mode = self.MODE_PLACE_CUE_BALL
     
     def initializeGL(self):
         glClearColor(0.0, 0.4, 0.0, 0.0)
@@ -72,6 +82,10 @@ class Canvas(QtOpenGL.QGLWidget):
         
         self.pool_table.draw()
         
+        if self.pool_table.is_settled():
+            if self.mode == self.MODE_SHOOT_CUE_BALL:
+                self.cue_stick.draw(self.pool_table.find_cue_ball())
+        
         self.frame_count += 1
         if self.frame_count % 10 == 0:
             self.fps_text = 'FPS: %1.2f' % frames_per_second
@@ -86,12 +100,53 @@ class Canvas(QtOpenGL.QGLWidget):
         current_animation_time = time.time()
         elapsed_time = current_animation_time - self.last_animation_time
         self.last_animation_time = current_animation_time
+
+        self._handle_key_presses(elapsed_time)
         
         self.pool_table.advance_simulation(elapsed_time)
         
         self.update()
     
-    def mousePressEvent(self, event):
-        i = self.pool_table.find_ball(0)
-        cue_ball = self.pool_table.ball_list[i]
-        cue_ball.velocity.x = -10.0
+    def key_strike(self, key):
+        if self.mode == self.MODE_SHOOT_CUE_BALL:
+            if key == QtCore.Qt.Key_Return:
+                cue_ball = self.pool_table.find_cue_ball()
+                cue_ball.velocity += self.cue_stick.calc_velocity()
+        elif self.mode == self.MODE_PLACE_CUE_BALL:
+            if key == QtCore.Qt.Key_Return:
+                self.mode = self.MODE_SHOOT_CUE_BALL
+        if key == QtCore.Qt.Key_Escape:
+            self.pool_table.reset_balls()
+            self.mode = self.MODE_PLACE_CUE_BALL
+    
+    def _handle_key_presses(self, elapsed_time):
+        window = self.parent()
+        if self.pool_table.is_settled():
+            if self.mode == self.MODE_SHOOT_CUE_BALL:
+                angle_change_speed = math.pi / 10.0
+                if window.is_key_down(QtCore.Qt.Key_Shift):
+                    angle_change_speed = math.pi / 30.0
+                angle_delta = angle_change_speed * elapsed_time
+                speed_change_speed = 2.0
+                speed_delta = speed_change_speed * elapsed_time
+                if window.is_key_down(QtCore.Qt.Key_Left):
+                    self.cue_stick.rotate(angle_delta)
+                if window.is_key_down(QtCore.Qt.Key_Right):
+                    self.cue_stick.rotate(-angle_delta)
+                if window.is_key_down(QtCore.Qt.Key_Up):
+                    self.cue_stick.adjust_speed(speed_delta)
+                if window.is_key_down(QtCore.Qt.Key_Down):
+                    self.cue_stick.adjust_speed(-speed_delta)
+            elif self.mode == self.MODE_PLACE_CUE_BALL:
+                cue_ball = self.pool_table.find_cue_ball()
+                move_ball_speed = 0.3
+                delta = move_ball_speed * elapsed_time
+                if cue_ball is not None:
+                    if window.is_key_down(QtCore.Qt.Key_Left):
+                        cue_ball.position.x -= delta
+                    if window.is_key_down(QtCore.Qt.Key_Right):
+                        cue_ball.position.x += delta
+                    if window.is_key_down(QtCore.Qt.Key_Down):
+                        cue_ball.position.y -= delta
+                    if window.is_key_down(QtCore.Qt.Key_Up):
+                        cue_ball.position.y += delta

@@ -28,6 +28,9 @@ class PoolTable(object):
         self.max_advance_distance = ball_radius
         self.friction = 0.995
     
+    def find_cue_ball(self):
+        return self.ball_list[self.find_ball(0)]
+    
     def find_ball(self, number):
         for i in range(len(self.ball_list)):
             ball = self.ball_list[i]
@@ -143,16 +146,24 @@ class PoolTable(object):
         for ball in self.ball_list:
             ball.render()
     
-    def advance_simulation(self, elapsed_time):
-    
-        # To prevent tunnelling, we need to know how fast the fastest ball is moving,
-        # and then only let the simulation advance in steps where the fastest ball does
-        # not move further than a certain distance at each of those steps.
+    def _calc_max_speed(self):
         max_speed = 0.0
         for ball in self.ball_list:
             speed = ball.velocity.Length()
             if speed > max_speed:
                 max_speed = speed
+        return max_speed
+    
+    def is_settled(self, epsilon=1e-2):
+        max_speed = self._calc_max_speed()
+        return True if max_speed < epsilon else False
+    
+    def advance_simulation(self, elapsed_time):
+    
+        # To prevent tunnelling, we need to know how fast the fastest ball is moving,
+        # and then only let the simulation advance in steps where the fastest ball does
+        # not move further than a certain distance at each of those steps.
+        max_speed = self._calc_max_speed()
         
         max_distance = max_speed * elapsed_time
         if max_distance > self.max_advance_distance:
