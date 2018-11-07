@@ -116,7 +116,7 @@ class Canvas(QtOpenGL.QGLWidget):
 
         if self.mode == self.MODE_SHOOT_CUE_BALL:
             cue_ball = self.pool_table.find_cue_ball()
-            if cue_ball is None:
+            if cue_ball is None and self.pool_table.is_settled():
                 self.pool_table.replace_cue_ball()
                 self.mode = self.MODE_PLACE_CUE_BALL
         
