@@ -194,7 +194,7 @@ class PoolTable(object):
         max_speed = self._calc_max_speed()
         return True if max_speed < epsilon else False
     
-    def advance_simulation(self, elapsed_time):
+    def advance_simulation(self, elapsed_time, event_callback=None):
     
         # To prevent tunnelling, we need to know how fast the fastest ball is moving,
         # and then only let the simulation advance in steps where the fastest ball does
@@ -209,10 +209,10 @@ class PoolTable(object):
         
         while elapsed_time > 0.0:
             delta_time = time_step if time_step < elapsed_time else elapsed_time
-            self._advance_balls(delta_time)
+            self._advance_balls(delta_time, event_callback)
             elapsed_time -= delta_time
     
-    def _advance_balls(self, delta_time):
+    def _advance_balls(self, delta_time, event_callback=None):
         # We begin with the assumption that no ball is in collision with any other, or any bumper.
         # After moving all the balls, we then are going to check for collisions.
         # To simplify matters, we're not going to try to calculate the exact time of impact.
@@ -227,11 +227,13 @@ class PoolTable(object):
         while True:
             ball_a, ball_b = self._find_random_ball_with_ball_collision()
             if ball_a is not None and ball_b is not None:
+                event_callback('ball_hit_ball', (ball_b.velocity - ball_a.velocity).Length())
                 self._resolve_ball_with_ball_collision(ball_a, ball_b)
                 continue
             
             ball, contact_point, contact_normal = self._find_random_ball_with_bumper_collision()
             if ball is not None:
+                event_callback('ball_hit_bumper', ball.velocity.Length())
                 self._resolve_ball_with_bumper_collision(ball, contact_point, contact_normal)
                 continue
             
@@ -246,6 +248,7 @@ class PoolTable(object):
         for ball in remove_ball_list:
             self.ball_list.remove(ball)
             self.pocketed_balls_list.append(ball)
+            event_callback('ball_in_pocket', ball.velocity.Length())
         
         # Lastly, simulate friction with a simple scale.
         for ball in self.ball_list:

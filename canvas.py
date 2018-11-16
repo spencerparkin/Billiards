@@ -2,8 +2,10 @@
 
 import time
 import math
+import functools
 
 from PyQt5 import QtGui, QtCore, QtWidgets, QtOpenGL
+from PyQt5 import QtMultimedia
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -40,6 +42,14 @@ class Canvas(QtOpenGL.QGLWidget):
         self.cue_stick = CueStick()
         
         self.mode = self.MODE_PLACE_CUE_BALL
+        
+        try:
+            self.ball_hit_ball_sound = QtMultimedia.QSound('Sounds/ball_hit_ball.wav')
+            self.ball_hit_bumper_sound = QtMultimedia.QSound('Sounds/ball_hit_bumper.wav')
+            self.ball_in_pocket_sound = QtMultimedia.QSound('Sounds/ball_in_pocket.wav')
+        except Exception as ex:
+            error = str(ex)
+            error = None
     
     def initializeGL(self):
         glClearColor(0.0, 0.4, 0.0, 0.0)
@@ -104,6 +114,9 @@ class Canvas(QtOpenGL.QGLWidget):
         
         glFlush()
     
+    def _pool_table_event_callback(self, event_map, event, intensity):
+        event_map[event] = intensity
+    
     def animation_step(self):
         
         current_animation_time = time.time()
@@ -112,7 +125,18 @@ class Canvas(QtOpenGL.QGLWidget):
 
         self._handle_key_presses(elapsed_time)
         
-        self.pool_table.advance_simulation(elapsed_time)
+        event_map = {}
+        self.pool_table.advance_simulation(elapsed_time, event_callback=functools.partial(self._pool_table_event_callback, event_map))
+
+        # I'm not sure how many channels we get, and I don't see any way to control the intensity of the sounds.
+        # We really should very the intensity based on how hard a ball hits another ball or a bumper.
+        # I've noticed that if a ball is close to the edge of the table and is moving slow, we can sometimes get too many repeated bumper plays.
+        if 'ball_hit_ball' in event_map:
+            self.ball_hit_ball_sound.play()
+        if 'ball_hit_bumper' in event_map:
+            self.ball_hit_bumper_sound.play()
+        if 'ball_in_pocket' in event_map:
+            self.ball_in_pocket_sound.play()
 
         if self.mode == self.MODE_SHOOT_CUE_BALL:
             cue_ball = self.pool_table.find_cue_ball()
