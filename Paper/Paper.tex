@@ -91,7 +91,11 @@ So the case we care about must be the positive case.  In that case, we get
 \begin{equation*}
 x_1 = v_1 + \left(\frac{2m_2}{m_1+m_2}(v_2\cdot n)+\left(\frac{m_1-m_2}{m_1+m_2}-1\right)(v_1\cdot n)\right)n.
 \end{equation*}
-Using this equation, we can now resolve collisions between two billiard balls.  Notice that it didn't matter which direction $n$ pointed, as long as it was a normal to the contact surface.
+Using this equation, we can now resolve collisions between two billiard balls.  Notice that it didn't matter which direction $n$ pointed, as long as it was a normal to the contact surface.  The equation simplifies further as
+\begin{equation*}
+x_1 = v_1 + \left(\frac{2m_2}{m_1+m_2}(v_2-v_1)\cdot n\right)n.
+\end{equation*}
+This form makes it easier to see the impulse magnitude in terms of the relative velocity.
 
 Let's check some intuition here.
 Suppose the first ball was at rest when the second ball came and hit it.  Further, let's suppose the two balls
